@@ -84,7 +84,7 @@ class TelaEnvio extends Tela {
         LinearLayout l = new LinearLayout(a);
         l.setGravity(Gravity.CENTER_VERTICAL);
         l.setPadding(Ui.dp(10), Ui.dp(8), Ui.dp(14), Ui.dp(8));
-        l.setBackground(Ui.forma(Ui.superficie, destaque ? Ui.primaria : Ui.contorno, 30));
+        l.setBackground(Ui.forma(Ui.superficie, destaque ? Ui.destaque : Ui.contorno, 30));
 
         LinearLayout.LayoutParams lpA = new LinearLayout.LayoutParams(Ui.dp(36), Ui.dp(36));
         lpA.rightMargin = Ui.dp(12);

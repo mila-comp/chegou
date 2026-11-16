@@ -35,27 +35,40 @@ import java.io.File;
 final class Ui {
 
     // Paleta atual (muda com tema claro/escuro, cor escolhida e alto contraste).
-    static int fundo, superficie, texto, textoSec, primaria, laranja, linha, contorno;
+    // primaria: textos, links e contornos. destaque: preenchimento de botões; sobreDestaque: texto em cima dele.
+    static int fundo, superficie, texto, textoSec, primaria, destaque, sobreDestaque, laranja, linha, contorno;
     static boolean escuro, contraste;
     static float escalaFonte = 1f;
     private static float densidade = 1f;
+    private static boolean areia;
 
-    /** Cores principais que o usuário pode escolher: {no tema claro, no tema escuro}. */
+    // A paleta "Areia": BBBB88 · CCC68D · EEDD99 · EEC290 · EEAA88.
+    static final int OLIVA = Color.rgb(0xBB, 0xBB, 0x88), CAQUI = Color.rgb(0xCC, 0xC6, 0x8D),
+            AMARELO = Color.rgb(0xEE, 0xDD, 0x99), PESSEGO = Color.rgb(0xEE, 0xC2, 0x90),
+            SALMAO = Color.rgb(0xEE, 0xAA, 0x88);
+    private static final int MARROM = Color.rgb(63, 36, 22);
+
+    /** Outras cores principais que o usuário pode escolher (índices 1+): {no claro, no escuro}. */
     static final int[][] CORES = {
+            {Color.rgb(184, 96, 58), SALMAO},                    // areia (padrão; trata-se à parte)
             {Color.rgb(59, 91, 219), Color.rgb(138, 164, 255)},  // índigo
             {Color.rgb(13, 148, 136), Color.rgb(94, 214, 200)},  // verde-água
             {Color.rgb(124, 77, 219), Color.rgb(184, 156, 255)}, // roxo
-            {Color.rgb(224, 82, 62), Color.rgb(255, 150, 130)},  // coral
             {Color.rgb(214, 62, 122), Color.rgb(255, 140, 185)}, // rosa
     };
 
     static String[] nomesCores() {
-        return new String[]{L.t("Índigo", "Indigo"), L.t("Verde-água", "Teal"), L.t("Roxo", "Purple"),
-                L.t("Coral", "Coral"), L.t("Rosa", "Pink")};
+        return new String[]{L.t("Areia (padrão)", "Sand (default)"), L.t("Índigo", "Indigo"),
+                L.t("Verde-água", "Teal"), L.t("Roxo", "Purple"), L.t("Rosa", "Pink")};
     }
 
+    private static int indiceCor(Dados d) {
+        return Math.max(0, Math.min(d.cor, CORES.length - 1));
+    }
+
+    /** A cor que representa o app fora dele (notificações). */
     static int corPrincipal(Dados d) {
-        return CORES[Math.max(0, Math.min(d.cor, CORES.length - 1))][d.escuro ? 1 : 0];
+        return CORES[indiceCor(d)][d.escuro ? 1 : 0];
     }
 
     static void aplicar(Context c, Dados d) {
@@ -63,6 +76,7 @@ final class Ui {
         escuro = d.escuro;
         contraste = d.contraste;
         escalaFonte = d.fonte == 2 ? 1.3f : d.fonte == 1 ? 1.15f : 1f;
+        areia = indiceCor(d) == 0;
         primaria = corPrincipal(d);
         if (escuro) {
             fundo = Color.rgb(20, 22, 28);
@@ -72,13 +86,36 @@ final class Ui {
             laranja = Color.rgb(255, 176, 103);
             contorno = Color.rgb(52, 57, 70);
         } else {
-            // Creme claro com cartões brancos: o tom dos rascunhos, mais leve.
             fundo = Color.rgb(250, 244, 237);
             superficie = Color.WHITE;
             texto = Color.rgb(27, 37, 64);
             textoSec = Color.rgb(112, 108, 118);
             laranja = Color.rgb(226, 122, 34);
             contorno = Color.rgb(228, 217, 205);
+        }
+        destaque = primaria;
+        sobreDestaque = escuro ? fundo : Color.WHITE;
+        linha = primaria;
+        if (areia) {
+            // Tons quentes: fundo amarelado bem claro, oliva nos detalhes, salmão nos botões.
+            if (escuro) {
+                fundo = Color.rgb(29, 28, 21);
+                superficie = Color.rgb(42, 41, 32);
+                texto = Color.rgb(244, 239, 217);
+                textoSec = Color.rgb(185, 180, 142);
+                laranja = CAQUI;
+                contorno = Color.rgb(69, 67, 47);
+            } else {
+                fundo = Color.rgb(252, 248, 233);
+                superficie = Color.rgb(255, 254, 249);
+                texto = Color.rgb(54, 53, 42);
+                textoSec = Color.rgb(118, 117, 80);
+                laranja = Color.rgb(134, 134, 72);
+                contorno = Color.rgb(221, 216, 172);
+            }
+            destaque = SALMAO;
+            sobreDestaque = MARROM;
+            linha = OLIVA;
         }
         if (contraste) {
             fundo = escuro ? Color.BLACK : Color.WHITE;
@@ -87,9 +124,11 @@ final class Ui {
             textoSec = texto;
             contorno = texto;
             primaria = escuro ? Color.rgb(160, 200, 255) : Color.rgb(0, 50, 160);
+            destaque = primaria;
+            sobreDestaque = fundo;
+            linha = primaria;
             laranja = escuro ? Color.rgb(255, 190, 90) : Color.rgb(160, 70, 0);
         }
-        linha = primaria;
     }
 
     static int dp(float v) {
@@ -181,8 +220,8 @@ final class Ui {
 
     static TextView botaoCheio(Context c, String s) {
         TextView b = botao(c, s);
-        b.setTextColor(escuro ? fundo : Color.WHITE);
-        b.setBackground(clicavel(forma(primaria, primaria, 6)));
+        b.setTextColor(sobreDestaque);
+        b.setBackground(clicavel(forma(destaque, 0, 6)));
         return b;
     }
 
@@ -336,35 +375,37 @@ final class Ui {
     private static final int[] CORES_AVATAR = {
             Color.rgb(64, 112, 206), Color.rgb(222, 120, 30), Color.rgb(37, 150, 110),
             Color.rgb(168, 85, 247), Color.rgb(214, 73, 110), Color.rgb(20, 140, 170)};
+    private static final int[] CORES_AVATAR_AREIA = {OLIVA, CAQUI, AMARELO, PESSEGO, SALMAO};
 
     /** Círculo colorido com a inicial do nome. */
     static TextView avatar(Context c, String nome, int tamanhoDp) {
         String n = nome.trim();
+        int[] cores = areia && !contraste ? CORES_AVATAR_AREIA : CORES_AVATAR;
         TextView t = texto(c, n.isEmpty() ? "?" : n.substring(0, n.offsetByCodePoints(0, 1)).toUpperCase(),
-                tamanhoDp * 0.42f / escalaFonte, Color.WHITE);
+                tamanhoDp * 0.42f / escalaFonte, cores == CORES_AVATAR ? Color.WHITE : MARROM);
         t.setTypeface(Typeface.DEFAULT_BOLD);
         t.setGravity(Gravity.CENTER);
-        t.setBackground(forma(CORES_AVATAR[Math.abs(n.hashCode()) % CORES_AVATAR.length], 0, tamanhoDp / 2f));
+        t.setBackground(forma(cores[Math.abs(n.hashCode()) % cores.length], 0, tamanhoDp / 2f));
         t.setLayoutParams(new LinearLayout.LayoutParams(dp(tamanhoDp), dp(tamanhoDp)));
         return t;
     }
 
     /** Etiqueta arredondada; "ativa" fica preenchida. */
     static TextView chip(Context c, String s, boolean ativa) {
-        TextView t = texto(c, s, 14, ativa ? (escuro ? fundo : Color.WHITE) : primaria);
+        TextView t = texto(c, s, 14, ativa ? sobreDestaque : primaria);
         t.setSingleLine(true);
         t.setPadding(dp(14), dp(7), dp(14), dp(7));
-        t.setBackground(clicavel(forma(ativa ? primaria : superficie, primaria, 20)));
+        t.setBackground(clicavel(forma(ativa ? destaque : superficie, ativa ? destaque : primaria, 20)));
         t.setClickable(true);
         return t;
     }
 
     /** Botão redondo flutuante com "+". */
     static TextView fab(Context c) {
-        TextView t = texto(c, "+", 30 / escalaFonte, escuro ? fundo : Color.WHITE);
+        TextView t = texto(c, "+", 30 / escalaFonte, sobreDestaque);
         t.setGravity(Gravity.CENTER);
         t.setIncludeFontPadding(false);
-        t.setBackground(clicavel(forma(primaria, 0, 28)));
+        t.setBackground(clicavel(forma(destaque, 0, 28)));
         t.setElevation(dp(6));
         t.setClickable(true);
         pressionavel(t);

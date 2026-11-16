@@ -72,7 +72,7 @@ final class Dados {
     final List<Midia> midias = new ArrayList<Midia>();
     String ativa = "";
     final List<Registro> historico = new ArrayList<Registro>();
-    boolean confirmar; // perguntar antes de enviar
+    boolean confirmar = true; // perguntar antes de enviar
     boolean whatsJunto = true; // WhatsApp: abrir uma vez só e marcar todos lá
     int cor; // cor principal escolhida (índice em Ui.CORES)
 
@@ -290,7 +290,7 @@ final class Dados {
             o.put("fonte", fonte);
             o.put("idioma", idioma);
             o.put("telegramToken", telegramToken);
-            o.put("confirmar", confirmar);
+            o.put("confirmarEnvio", confirmar);
             o.put("whatsJunto", whatsJunto);
             o.put("cor", cor);
             JSONArray hs = new JSONArray();
@@ -373,7 +373,7 @@ final class Dados {
             fonte = o.optInt("fonte", 0);
             idioma = o.optString("idioma", "pt");
             telegramToken = o.optString("telegramToken", "");
-            confirmar = o.optBoolean("confirmar", false);
+            confirmar = o.optBoolean("confirmarEnvio", true);
             whatsJunto = o.optBoolean("whatsJunto", true);
             cor = o.optInt("cor", 0);
             JSONArray hs = o.optJSONArray("historico");

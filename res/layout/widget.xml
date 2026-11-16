@@ -14,7 +14,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="ENVIAR"
-        android:textColor="#FFFFFF"
+        android:textColor="#3F2416"
         android:textSize="18sp"
         android:textStyle="bold" />
 
@@ -25,6 +25,6 @@
         android:ellipsize="end"
         android:gravity="center"
         android:maxLines="2"
-        android:textColor="#DBEAFE"
+        android:textColor="#5C3A28"
         android:textSize="12sp" />
 </LinearLayout>

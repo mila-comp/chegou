@@ -84,6 +84,11 @@ public class FotosTest {
         a.irPara(new TelaHistorico()); foto("20-historico");
         a.irPara(new TelaInicio());
         a.envio.enviar(m);
+        foto("24-confirmar");
+        a.fecharFolha();
+        d.confirmar = false;
+        a.envio.enviar(m);
+        d.confirmar = true;
         idle();
         a.envio.itens.get(0).estado = Envio.ENVIADO;
         a.desenhar();

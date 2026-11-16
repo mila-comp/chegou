@@ -31,6 +31,8 @@ public class Lembretes extends BroadcastReceiver {
 
     static final String ACAO_ALARME = "com.mensagemrapida.ALARME";
     static final String ACAO_ENVIAR_FUNDO = "com.mensagemrapida.ENVIAR_FUNDO";
+    static final String ACAO_CONFIRMAR = "com.mensagemrapida.CONFIRMAR";
+    static final String ACAO_CANCELAR = "com.mensagemrapida.CANCELAR";
     static final String ACAO_DISPENSAR = "com.mensagemrapida.DISPENSAR";
     static final String EXTRA_MENSAGEM = "mensagem";
     static final String PERMISSAO_NOTIFICAR = "android.permission.POST_NOTIFICATIONS"; // API 33
@@ -50,7 +52,13 @@ public class Lembretes extends BroadcastReceiver {
                 d.salvar();
             }
         } else if (ACAO_ENVIAR_FUNDO.equals(acao)) {
+            // Com a confirmação ligada, o botão Enviar vira "Confirmar / Cancelar" na própria notificação.
+            if (m != null && d.confirmar) mostrar(ctx, d, m, true);
+            else if (m != null) enviarEmFundo(ctx, m, goAsync());
+        } else if (ACAO_CONFIRMAR.equals(acao)) {
             if (m != null) enviarEmFundo(ctx, m, goAsync());
+        } else if (ACAO_CANCELAR.equals(acao)) {
+            if (m != null) mostrar(ctx, d, m, false);
         } else {
             // Alarme de início/fim de janela, ou o celular acabou de ligar.
             reagendar(ctx);
@@ -74,7 +82,7 @@ public class Lembretes extends BroadcastReceiver {
                 continue;
             }
             if (!dentroDaJanela(m, agora)) nm.cancel(idNotificacao(m));
-            else if (m.lembreteFeito != hoje()) mostrar(ctx, d, m);
+            else if (m.lembreteFeito != hoje()) mostrar(ctx, d, m, false);
             proximo = Math.min(proximo, Math.min(proximaVez(m.lembreteInicio, agora), proximaVez(m.lembreteFim, agora)));
         }
 
@@ -120,7 +128,8 @@ public class Lembretes extends BroadcastReceiver {
 
     // ------------------------------------------------------------------ notificação
 
-    private static void mostrar(Context ctx, Dados d, Dados.Mensagem m) {
+    /** confirmando = o usuário tocou em Enviar e falta confirmar (só no envio sem abrir o app). */
+    private static void mostrar(Context ctx, Dados d, Dados.Mensagem m, boolean confirmando) {
         List<String> nomes = new ArrayList<String>();
         for (String id : m.destinatarios) {
             Dados.Contato c = d.contato(id);
@@ -154,14 +163,25 @@ public class Lembretes extends BroadcastReceiver {
                 .setSmallIcon(R.drawable.ic_notif)
                 .setColor(Ui.corPrincipal(d))
                 .setContentTitle(m.nome)
-                .setContentText(L.t("Avisar ", "Tell ") + quem + "?")
                 .setContentIntent(abrir)
                 .setDeleteIntent(dispensar)
                 .setOnlyAlertOnce(true)
-                .setShowWhen(false)
-                .addAction(R.drawable.ic_notif, L.t("Enviar agora", "Send now"), enviar);
-        if (!m.texto.isEmpty()) b.setStyle(new Notification.BigTextStyle().bigText(
-                L.t("Avisar ", "Tell ") + quem + "?\n“" + m.texto + "”"));
+                .setShowWhen(false);
+        String pergunta;
+        if (confirmando) {
+            pergunta = L.t("Confirmar envio para ", "Confirm sending to ") + quem + "?";
+            b.addAction(R.drawable.ic_notif, L.t("Confirmar ✓", "Confirm ✓"), PendingIntent.getBroadcast(ctx, 0,
+                    new Intent(ctx, Lembretes.class).setAction(ACAO_CONFIRMAR).setData(unico)
+                            .putExtra(EXTRA_MENSAGEM, m.id), PendingIntent.FLAG_UPDATE_CURRENT | IMUTAVEL));
+            b.addAction(R.drawable.ic_notif, L.t("Cancelar", "Cancel"), PendingIntent.getBroadcast(ctx, 0,
+                    new Intent(ctx, Lembretes.class).setAction(ACAO_CANCELAR).setData(unico)
+                            .putExtra(EXTRA_MENSAGEM, m.id), PendingIntent.FLAG_UPDATE_CURRENT | IMUTAVEL));
+        } else {
+            pergunta = L.t("Avisar ", "Tell ") + quem + "?";
+            b.addAction(R.drawable.ic_notif, L.t("Enviar agora", "Send now"), enviar);
+        }
+        b.setContentText(pergunta);
+        if (!m.texto.isEmpty()) b.setStyle(new Notification.BigTextStyle().bigText(pergunta + "\n“" + m.texto + "”"));
         avisar(ctx, idNotificacao(m), b.build());
     }
 

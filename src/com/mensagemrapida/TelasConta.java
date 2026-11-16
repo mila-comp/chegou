@@ -200,7 +200,7 @@ class TelaConfig extends Tela {
 
         item(col, L.t("Aparência", "Appearance"), d.escuro ? L.t("Escuro", "Dark") : L.t("Claro", "Light"),
                 new Runnable() { public void run() { aparencia(); } });
-        item(col, L.t("Cor do app", "App color"), Ui.nomesCores()[Math.min(d.cor, Ui.CORES.length - 1)],
+        item(col, L.t("Cor do app", "App color"), Ui.nomesCores()[Math.max(0, Math.min(d.cor, Ui.CORES.length - 1))],
                 new Runnable() { public void run() { cor(); } });
         item(col, L.t("Conta", "Account"), null, new Runnable() { public void run() { conta(); } });
         item(col, L.t("Notificações", "Notifications"), d.vibrar ? L.t("Vibrar", "Vibrate") : L.t("Silencioso", "Silent"),

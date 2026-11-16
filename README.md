@@ -8,7 +8,7 @@ pessoas escolhidas, cada uma pela sua rede preferida, ao toque de um botão.
 <p>
   <img src="docs/telas/01-chegou.png" width="19%" alt="Tela de boas-vindas">
   <img src="docs/telas/03-inicio.png" width="19%" alt="Início com o botão Enviar">
-  <img src="docs/telas/21-envio.png" width="19%" alt="Acompanhamento do envio">
+  <img src="docs/telas/24-confirmar.png" width="19%" alt="Confirmação antes de enviar">
   <img src="docs/telas/14-info.png" width="19%" alt="Quem recebe e lembrete">
   <img src="docs/telas/22-escuro.png" width="19%" alt="Tema escuro">
 </p>
@@ -22,7 +22,8 @@ o Play Protect pode mostrar um aviso: toque em *Instalar mesmo assim*.
 
 ## O que ele faz
 
-- **Um toque para enviar**: o botão ENVIAR do Início, ou o atalho (widget) na tela inicial do celular.
+- **Um toque e uma confirmação**: toque em ENVIAR (no app, no atalho da tela inicial ou na notificação),
+  confirme, e a mensagem vai. A confirmação evita envio sem querer e pode ser desligada.
 - **Lembrete na notificação**: escolha um horário (ex.: das 16h às 19h) e os dias da semana; nessa janela
   aparece uma notificação com o botão *Enviar agora*. Com SMS e Telegram, envia sem nem abrir o app.
 - **Mensagens salvas** com nome, texto de até 1000 caracteres e mídia opcional (até 10 MB).
@@ -30,7 +31,7 @@ o Play Protect pode mostrar um aviso: toque em *Instalar mesmo assim*.
 - **Contatos** com o meio de comunicação principal de cada um.
 - **Acompanhamento do envio**: cada pessoa aparece com seu estado (enviado, aberta, falhou e por quê).
 - **Histórico** dos últimos envios.
-- Tema claro e escuro, cinco cores para escolher, fonte maior, alto contraste, português e inglês.
+- Tema claro e escuro, paleta "Areia" e outras quatro cores para escolher, fonte maior, alto contraste, português e inglês.
 - Tudo fica **só no celular**: não há servidor, cadastro online nem coleta de dados.
 
 ### Como cada rede envia

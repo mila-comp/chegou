@@ -54,11 +54,11 @@ class TelaInicio extends Tela {
         col.addView(vao, new LinearLayout.LayoutParams(1, 0, 1));
 
         // O grande botão ENVIAR: envia com tudo o que foi configurado na mensagem.
-        final TextView enviar = Ui.texto(a, L.t("ENVIAR", "SEND"), 34, Ui.escuro ? Ui.fundo : android.graphics.Color.WHITE);
+        final TextView enviar = Ui.texto(a, L.t("ENVIAR", "SEND"), 34, Ui.sobreDestaque);
         enviar.setGravity(Gravity.CENTER);
         enviar.setLetterSpacing(0.08f);
         enviar.setTypeface(Typeface.DEFAULT_BOLD);
-        enviar.setBackground(Ui.clicavel(Ui.forma(Ui.primaria, 0, 60)));
+        enviar.setBackground(Ui.clicavel(Ui.forma(Ui.destaque, 0, 60)));
         enviar.setElevation(Ui.dp(6));
         enviar.setClickable(true);
         Ui.pressionavel(enviar);

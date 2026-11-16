@@ -149,6 +149,12 @@ public class FumacaTest {
         System.out.println("=== " + nome + " ===\n" + despejar(raiz()));
     }
 
+    /** Toca em ENVIAR e confirma na folha que sobe. */
+    void enviarEConfirmar(int pessoas) {
+        clicar("ENVIAR");
+        clicar("Enviar para " + pessoas + (pessoas == 1 ? " pessoa" : " pessoas"));
+    }
+
     void abrirApp() {
         ctl = Robolectric.buildActivity(MainActivity.class).setup();
         idle();
@@ -229,8 +235,14 @@ public class FumacaTest {
         assertTrue(tem("Cheguei"));
         assertTrue(tem("Fulano, Ciclano, Beltrano"));
 
-        // ENVIAR: pede permissão de SMS
+        // ENVIAR: sobe a confirmação; cancelar não envia nada
         clicar("ENVIAR");
+        tela("confirmação");
+        assertTrue(tem("Enviar “Cheguei”?"));
+        clicar("Cancelar");
+        assertNull(shadowOf(a()).getNextStartedActivity());
+        // Confirmando: pede permissão de SMS
+        enviarEConfirmar(3);
         shadowOf(a()).grantPermissions(Manifest.permission.SEND_SMS);
         a().onRequestPermissionsResult(1, new String[]{Manifest.permission.SEND_SMS},
                 new int[]{android.content.pm.PackageManager.PERMISSION_GRANTED});
@@ -238,10 +250,9 @@ public class FumacaTest {
         tela("envio em andamento");
         // O simulador não tem telefonia: o SMS do Ciclano aparece como falha na lista.
         assertTrue(tem("SMS falhou"));
-        assertTrue(tem("0 de 3") || tem("1 de 3"));
-        clicar("Abrir conversa com Fulano");
+        // A primeira conversa abre sozinha, sem mais um toque
         Intent w = shadowOf(a()).getNextStartedActivity();
-        assertNotNull("WhatsApp deveria abrir", w);
+        assertNotNull("WhatsApp deveria abrir sozinho", w);
         System.out.println("WhatsApp: " + w.getData() + " pkg=" + w.getPackage());
         assertTrue(w.getData().toString().contains("phone=5511912345678"));
         assertTrue(w.getData().toString().contains("Ol%C3%A1"));
@@ -315,8 +326,7 @@ public class FumacaTest {
         clicar("☰");
         clicar("🏠  Início");
         assertTrue(tem("📎 Foto da casa"));
-        clicar("ENVIAR");
-        clicar("Abrir conversa com Fulano");
+        enviarEConfirmar(3);
         Intent comMidia = shadowOf(a()).getNextStartedActivity();
         System.out.println("Com mídia: " + comMidia + " extras=" + comMidia.getExtras());
         assertEquals(Intent.ACTION_SEND, comMidia.getAction());
@@ -335,8 +345,10 @@ public class FumacaTest {
         assertTrue(tem("Recebe as mensagens"));
         clicar("Enviar mensagem só para Fulano");
         itemDialogo(0);
+        clicar("Enviar para 1 pessoa");
         tela("envio só para Fulano");
-        assertTrue(tem("0 de 1"));
+        assertTrue(tem("1 de 1"));
+        assertNotNull(shadowOf(a()).getNextStartedActivity());
         clicar("‹");
         clicar("Voltar");
         segurar("Beltrano");
@@ -434,21 +446,25 @@ public class FumacaTest {
         Intent i = new Intent(a(), MainActivity.class).setAction(WidgetEnviar.ACAO_ENVIAR);
         ctl.newIntent(i);
         idle();
-        assertTrue("widget abre a tela de envio", tem("Abrir conversa com Ana Maria"));
-        clicar("Abrir conversa com Ana Maria");
+        tela("widget: confirmação");
+        assertTrue("widget pede confirmação", tem("Enviar “Oi”?"));
+        assertNull(shadowOf(a()).getNextStartedActivity());
+        clicar("Enviar para 1 pessoa");
         Intent w = shadowOf(a()).getNextStartedActivity();
-        assertNotNull("widget deveria enviar", w);
+        assertNotNull("confirmou: abre a conversa sozinho", w);
         assertTrue(w.getData().toString().contains("phone=5521988887777"));
         assertTrue("{nome} vira o primeiro nome", w.getData().toString().contains("text=Oi+Ana%2C"));
 
-        // Com "confirmar antes de enviar", pergunta primeiro
-        d.confirmar = true;
-        a().irPara(new TelaInicio());
+        // Voltando da conversa, tudo certo: volta sozinho ao Início
+        ctl.pause().resume();
         idle();
+        assertTrue(tem("Tudo enviado ✓"));
+        assertTrue(tem("ENVIAR"));
+
+        // Com a confirmação desligada, um toque já abre a conversa
+        d.confirmar = false;
         clicar("ENVIAR");
-        assertTrue(String.valueOf(shadowOf(dialogo()).getMessage()).contains("1 pessoa"));
-        botaoDialogo(AlertDialog.BUTTON_POSITIVE);
-        assertTrue(tem("Abrir conversa com Ana Maria"));
+        assertNotNull(shadowOf(a()).getNextStartedActivity());
     }
 
     @Test
@@ -504,11 +520,10 @@ public class FumacaTest {
         d.salvar();
         a().irPara(new TelaInicio());
         idle();
-        clicar("ENVIAR");
+        enviarEConfirmar(3);
         tela("envio com WhatsApp em grupo");
         assertTrue(tem("Ana, Bia"));
-        assertTrue(tem("0 de 2"));
-        clicar("Abrir o WhatsApp");
+        assertTrue(tem("1 de 2"));
         Intent w = shadowOf(a()).getNextStartedActivity();
         assertEquals(Intent.ACTION_SEND, w.getAction());
         assertEquals("com.whatsapp", w.getPackage());
@@ -519,17 +534,17 @@ public class FumacaTest {
         m.texto = "Oi {nome}, cheguei!";
         a().irPara(new TelaInicio());
         idle();
-        clicar("ENVIAR");
-        assertTrue(tem("0 de 3"));
-        assertTrue(tem("Abrir conversa com Ana"));
+        enviarEConfirmar(3);
+        assertTrue(tem("1 de 3"));
+        assertTrue(tem("Abrir conversa com Bia"));
 
         // Desligando a opção também
         m.texto = "Cheguei em casa!";
         d.whatsJunto = false;
         a().irPara(new TelaInicio());
         idle();
-        clicar("ENVIAR");
-        assertTrue(tem("0 de 3"));
+        enviarEConfirmar(3);
+        assertTrue(tem("1 de 3"));
     }
 
     @Test
@@ -586,8 +601,10 @@ public class FumacaTest {
         assertTrue(shadowOf(n.actions[0].actionIntent).isActivityIntent());
         ctl.newIntent(shadowOf(n.actions[0].actionIntent).getSavedIntent());
         idle();
-        tela("envio a partir da notificação");
-        assertTrue(tem("Abrir o WhatsApp"));
+        tela("confirmação a partir da notificação");
+        assertEquals("enquanto não confirma, a notificação continua", 1, shadowOf(nm).size());
+        clicar("Enviar para 2 pessoas");
+        assertEquals(Intent.ACTION_SEND, shadowOf(a()).getNextStartedActivity().getAction());
         assertEquals("depois de enviar, a notificação some", 0, shadowOf(nm).size());
         d.salvar();
         assertEquals("e não volta no mesmo dia", 0, shadowOf(nm).size());
@@ -623,5 +640,17 @@ public class FumacaTest {
         d.salvar();
         n = shadowOf(nm).getAllNotifications().get(0);
         assertTrue("envio automático não abre o app", shadowOf(n.actions[0].actionIntent).isBroadcastIntent());
+
+        // Tocar em Enviar pede confirmação na própria notificação
+        new Lembretes().onReceive(a(), shadowOf(n.actions[0].actionIntent).getSavedIntent());
+        n = shadowOf(nm).getAllNotifications().get(0);
+        assertEquals(2, n.actions.length);
+        assertEquals("Confirmar ✓", String.valueOf(n.actions[0].title));
+        assertEquals("Confirmar envio para Davi?", String.valueOf(n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)));
+        // Cancelar volta ao botão Enviar
+        new Lembretes().onReceive(a(), shadowOf(n.actions[1].actionIntent).getSavedIntent());
+        n = shadowOf(nm).getAllNotifications().get(0);
+        assertEquals(1, n.actions.length);
+        assertEquals("Enviar agora", String.valueOf(n.actions[0].title));
     }
 }

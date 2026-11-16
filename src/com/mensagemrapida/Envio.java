@@ -7,9 +7,14 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Vibrator;
 import android.telephony.SmsManager;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import org.json.JSONObject;
 
@@ -92,15 +97,63 @@ final class Envio {
             a.aviso(L.t("Escolha para quem enviar em Info.", "Choose recipients in Info."));
             return;
         }
-        if (d.confirmar) {
-            a.confirmar(L.t("Enviar \"", "Send \"") + m.nome + L.t("\" para ", "\" to ") + para.size()
-                    + (para.size() == 1 ? L.t(" pessoa?", " person?") : L.t(" pessoas?", " people?")),
-                    new Runnable() {
-                        public void run() { preparar(m, para); }
-                    });
-        } else {
-            preparar(m, para);
+        if (d.confirmar) pedirConfirmacao(m, para);
+        else preparar(m, para);
+    }
+
+    /** A segurança contra toque sem querer: uma folha com o resumo e um botão grande para confirmar. */
+    private void pedirConfirmacao(final Dados.Mensagem m, final List<Dados.Contato> para) {
+        LinearLayout col = new LinearLayout(a);
+        col.setOrientation(LinearLayout.VERTICAL);
+
+        TextView titulo = Ui.texto(a, L.t("Enviar “", "Send “") + m.nome + "”?", 20, Ui.texto);
+        titulo.setTypeface(Typeface.DEFAULT_BOLD);
+        col.addView(titulo);
+        if (!m.texto.isEmpty()) {
+            TextView previa = Ui.texto(a, m.texto, 15, Ui.textoSec);
+            previa.setMaxLines(2);
+            previa.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            previa.setPadding(0, Ui.dp(4), 0, 0);
+            col.addView(previa);
         }
+
+        LinearLayout quem = new LinearLayout(a);
+        quem.setGravity(Gravity.CENTER_VERTICAL);
+        quem.setPadding(0, Ui.dp(14), 0, Ui.dp(18));
+        StringBuilder nomes = new StringBuilder();
+        for (int i = 0; i < para.size(); i++) {
+            if (i < 4) {
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(Ui.dp(32), Ui.dp(32));
+                lp.rightMargin = Ui.dp(6);
+                quem.addView(Ui.avatar(a, para.get(i).nome, 32), lp);
+            }
+            if (i < 3) nomes.append(i > 0 ? ", " : "").append(para.get(i).nome.trim().split("\\s+")[0]);
+        }
+        if (para.size() > 3) nomes.append(" +").append(para.size() - 3);
+        TextView lista = Ui.texto(a, nomes, 15, Ui.texto);
+        lista.setPadding(Ui.dp(4), 0, 0, 0);
+        quem.addView(lista);
+        col.addView(quem);
+
+        TextView sim = Ui.botaoCheio(a, L.t("Enviar para ", "Send to ") + para.size()
+                + (para.size() == 1 ? L.t(" pessoa", " person") : L.t(" pessoas", " people")));
+        sim.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 17 * Ui.escalaFonte);
+        sim.setPadding(Ui.dp(18), Ui.dp(16), Ui.dp(18), Ui.dp(16));
+        sim.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                a.fecharFolha();
+                preparar(m, para);
+            }
+        });
+        col.addView(sim, Ui.margemBaixo(4));
+
+        TextView nao = Ui.link(a, L.t("Cancelar", "Cancel"));
+        nao.setGravity(Gravity.CENTER);
+        nao.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { a.fecharFolha(); }
+        });
+        col.addView(nao, Ui.margemBaixo(0));
+        a.abrirFolha(col);
     }
 
     private void preparar(Dados.Mensagem m, List<Dados.Contato> para) {
@@ -166,6 +219,12 @@ final class Envio {
 
     private void iniciar() {
         d.ativa = mensagem.id;
+        if (mensagem.lembrete) {
+            // Enviou (pelo app ou pela notificação): o lembrete de hoje está cumprido.
+            mensagem.lembreteFeito = Lembretes.hoje();
+            ((android.app.NotificationManager) a.getSystemService(Context.NOTIFICATION_SERVICE))
+                    .cancel(Lembretes.idNotificacao(mensagem));
+        }
         d.registrarEnvio(mensagem.nome, itens.size());
         if (!(a.telaAtual() instanceof TelaEnvio)) a.abrir(new TelaEnvio());
 
@@ -176,6 +235,9 @@ final class Envio {
             else telegram.add(it);
         }
         if (!telegram.isEmpty()) enviarTelegram(telegram);
+        // Já abre a primeira conversa: quem confirmou não precisa de mais um toque.
+        Item primeiro = proximoManual();
+        if (primeiro != null) abrir(primeiro);
         mudou();
     }
 
@@ -214,7 +276,13 @@ final class Envio {
     }
 
     private void mudou() {
-        if (a.telaAtual() instanceof TelaEnvio) a.desenhar();
+        if (terminou() && quantos(FALHOU) == 0 && !voltandoDeConversa && a.telaAtual() instanceof TelaEnvio) {
+            // Deu tudo certo: volta sozinho ao Início, sem pedir mais nada.
+            a.irPara(new TelaInicio());
+            a.aviso(L.t("Tudo enviado ✓", "All sent ✓"));
+        } else if (a.telaAtual() instanceof TelaEnvio) {
+            a.desenhar();
+        }
         if (!vibrou && terminou() && quantos(ENVIADO) > 0) {
             vibrou = true;
             vibrar();

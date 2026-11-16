@@ -45,6 +45,7 @@ public class MainActivity extends Activity {
     private FrameLayout conteudo;
     private View barra;
     private View gaveta;
+    private View folha;
     private View veu;
     private TextView aviso;
 
@@ -115,11 +116,6 @@ public class MainActivity extends Activity {
         if (m != null) {
             // Veio de um lembrete: essa passa a ser a mensagem do Início.
             d.ativa = m.id;
-            if (enviar) {
-                m.lembreteFeito = Lembretes.hoje();
-                ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE))
-                        .cancel(Lembretes.idNotificacao(m));
-            }
             d.salvar();
         }
         irPara(new TelaInicio());
@@ -166,7 +162,10 @@ public class MainActivity extends Activity {
         veu.setBackgroundColor(0x66000000);
         veu.setVisibility(View.GONE);
         veu.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { fecharGaveta(); }
+            public void onClick(View v) {
+                fecharGaveta();
+                fecharFolha();
+            }
         });
         raiz.addView(veu);
 
@@ -270,6 +269,43 @@ public class MainActivity extends Activity {
         });
     }
 
+    // ------------------------------------------------------------------ folha de baixo
+
+    /** Painel que sobe de baixo da tela (usado na confirmação de envio). */
+    void abrirFolha(View conteudo) {
+        if (folha != null) raiz.removeView(folha);
+        LinearLayout f = new LinearLayout(this);
+        f.setOrientation(LinearLayout.VERTICAL);
+        f.setBackground(Ui.forma(Ui.superficie, Ui.contorno, 24));
+        f.setPadding(Ui.dp(24), Ui.dp(22), Ui.dp(24), Ui.dp(20));
+        f.setElevation(Ui.dp(16));
+        f.setClickable(true);
+        f.addView(conteudo);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
+        lp.setMargins(Ui.dp(10), 0, Ui.dp(10), Ui.dp(10));
+        raiz.addView(f, lp);
+        folha = f;
+        veu.setVisibility(View.VISIBLE);
+        veu.setAlpha(0f);
+        veu.animate().alpha(1f).setDuration(160);
+        f.setTranslationY(Ui.dp(320));
+        f.animate().translationY(0).setDuration(220)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator());
+    }
+
+    void fecharFolha() {
+        if (folha == null) return;
+        final View f = folha;
+        folha = null;
+        veu.animate().alpha(0f).setDuration(150).withEndAction(new Runnable() {
+            public void run() { if (gaveta == null && folha == null) veu.setVisibility(View.GONE); }
+        });
+        f.animate().translationY(f.getHeight() + Ui.dp(20)).setDuration(180).withEndAction(new Runnable() {
+            public void run() { raiz.removeView(f); }
+        });
+    }
+
     // ------------------------------------------------------------------ navegação
 
     private Tela topo() {
@@ -344,7 +380,8 @@ public class MainActivity extends Activity {
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
-        if (gaveta != null) fecharGaveta();
+        if (folha != null) fecharFolha();
+        else if (gaveta != null) fecharGaveta();
         else voltar();
     }
 
