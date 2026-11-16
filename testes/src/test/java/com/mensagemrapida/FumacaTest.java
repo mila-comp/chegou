@@ -653,4 +653,49 @@ public class FumacaTest {
         assertEquals(1, n.actions.length);
         assertEquals("Enviar agora", String.valueOf(n.actions[0].title));
     }
+
+    void leiaute() {
+        View v = raiz();
+        v.measure(View.MeasureSpec.makeMeasureSpec(720, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(1000, View.MeasureSpec.EXACTLY));
+        v.layout(0, 0, 720, 1000);
+    }
+
+    android.widget.ScrollView rolagem() {
+        List<View> vs = new ArrayList<View>();
+        coletar(raiz(), vs);
+        for (View v : vs) if (v instanceof android.widget.ScrollView) return (android.widget.ScrollView) v;
+        return null;
+    }
+
+    @Test
+    public void marcarDiaNaoPerdeARolagem() {
+        abrirApp();
+        criarConta();
+        Dados d = Dados.de(a());
+        Dados.Mensagem m = new Dados.Mensagem();
+        m.id = "m1"; m.nome = "Teste"; m.texto = "Teste"; m.lembrete = true;
+        for (int i = 0; i < 6; i++) m.destinatarios.add(contato(d, "Pessoa " + i, Redes.WHATSAPP).id);
+        d.mensagens.add(m);
+        a().abrir(new TelaInfoMensagem(m));
+        idle();
+        leiaute();
+        rolagem().scrollTo(0, 400);
+        assertEquals("a tela precisa ser rolável para este teste", 400, rolagem().getScrollY());
+
+        // Desmarca a segunda-feira: a tela é redesenhada
+        List<View> vs = new ArrayList<View>();
+        coletar(raiz(), vs);
+        View segunda = null;
+        int letras = 0;
+        for (View v : vs) {
+            if (v instanceof TextView && v.isClickable() && ((TextView) v).getText().length() == 1 && ++letras == 2) segunda = v;
+        }
+        assertNotNull(segunda);
+        segunda.performClick();
+        idle();
+        leiaute();
+        rolagem().getViewTreeObserver().dispatchOnPreDraw();
+        assertEquals("continua onde estava", 400, rolagem().getScrollY());
+    }
 }

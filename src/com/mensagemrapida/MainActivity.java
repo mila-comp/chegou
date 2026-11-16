@@ -132,8 +132,16 @@ public class MainActivity extends Activity {
     private void montar() {
         getWindow().setStatusBarColor(Ui.fundo);
         getWindow().setNavigationBarColor(Ui.fundo);
-        getWindow().getDecorView().setSystemUiVisibility(
-                Ui.escuro ? 0 : View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        // No tema claro, os ícones das barras do sistema precisam ser escuros para aparecer.
+        // Ícones escuros na barra de navegação só existem a partir do Android 8 (flag 0x10);
+        // antes disso a barra fica preta, com os ícones brancos de sempre.
+        int flags = 0;
+        if (!Ui.escuro) {
+            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            if (android.os.Build.VERSION.SDK_INT >= 26) flags |= 0x10; // SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            else getWindow().setNavigationBarColor(android.graphics.Color.BLACK);
+        }
+        getWindow().getDecorView().setSystemUiVisibility(flags);
 
         raiz = new FrameLayout(this);
         raiz.setBackgroundColor(Ui.fundo);
@@ -354,9 +362,23 @@ public class MainActivity extends Activity {
     private void desenhar(int direcao) {
         Tela t = topo();
         Ui.fundoAtualMenu = Ui.fundo;
+        // Redesenhar a mesma tela (ex.: marcar um dia da semana) não pode perder a posição da rolagem.
+        android.widget.ScrollView antes = direcao == 0 && conteudo.getChildCount() > 0
+                ? rolagemDe(conteudo.getChildAt(0)) : null;
+        final int posicao = antes != null ? antes.getScrollY() : 0;
         View v = t.criar();
         conteudo.removeAllViews();
         conteudo.addView(v);
+        final android.widget.ScrollView depois = rolagemDe(v);
+        if (posicao > 0 && depois != null) {
+            depois.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
+                public boolean onPreDraw() {
+                    depois.getViewTreeObserver().removeOnPreDrawListener(this);
+                    depois.scrollTo(0, posicao);
+                    return true;
+                }
+            });
+        }
         barra.setVisibility(t.temBarra() ? View.VISIBLE : View.GONE);
         if (direcao != 0) {
             esconderTeclado();
@@ -365,6 +387,16 @@ public class MainActivity extends Activity {
             v.animate().alpha(1f).translationX(0f).setDuration(220)
                     .setInterpolator(new android.view.animation.DecelerateInterpolator());
         }
+    }
+
+    /** A área rolável de uma tela (ela mesma, ou dentro do quadro que segura o botão "+"). */
+    private static android.widget.ScrollView rolagemDe(View v) {
+        if (v instanceof android.widget.ScrollView) return (android.widget.ScrollView) v;
+        if (v instanceof ViewGroup && ((ViewGroup) v).getChildCount() > 0
+                && ((ViewGroup) v).getChildAt(0) instanceof android.widget.ScrollView) {
+            return (android.widget.ScrollView) ((ViewGroup) v).getChildAt(0);
+        }
+        return null;
     }
 
     Tela telaAtual() {
