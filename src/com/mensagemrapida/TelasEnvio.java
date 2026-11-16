@@ -45,15 +45,19 @@ class TelaEnvio extends Tela {
         for (final Envio.Item it : e.itens) col.addView(linha(it, it == proximo), Ui.margemBaixo(8));
 
         if (proximo != null) {
-            TextView abrir = Ui.botaoCheio(a, L.t("Abrir conversa com ", "Open chat with ") + proximo.contato.nome);
+            TextView abrir = Ui.botaoCheio(a, proximo.grupo ? L.t("Abrir o WhatsApp", "Open WhatsApp")
+                    : L.t("Abrir conversa com ", "Open chat with ") + proximo.contato.nome);
             abrir.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) { e.abrir(proximo); }
             });
             LinearLayout.LayoutParams lp = Ui.margemBaixo(0);
             lp.topMargin = Ui.dp(16);
             col.addView(abrir, lp);
-            TextView dica = Ui.texto(a, L.t("Envie na conversa e volte aqui para a próxima.",
-                    "Send in the chat, then come back here for the next one."), 13, Ui.textoSec);
+            TextView dica = Ui.texto(a, proximo.grupo
+                    ? L.t("No WhatsApp, marque essas pessoas e toque em enviar: vai para todas de uma vez.",
+                            "In WhatsApp, tick these people and tap send: it goes to all of them at once.")
+                    : L.t("Envie na conversa e volte aqui para a próxima.",
+                            "Send in the chat, then come back here for the next one."), 13, Ui.textoSec);
             dica.setGravity(Gravity.CENTER);
             dica.setPadding(0, Ui.dp(8), 0, 0);
             col.addView(dica);
@@ -80,11 +84,11 @@ class TelaEnvio extends Tela {
         LinearLayout l = new LinearLayout(a);
         l.setGravity(Gravity.CENTER_VERTICAL);
         l.setPadding(Ui.dp(10), Ui.dp(8), Ui.dp(14), Ui.dp(8));
-        l.setBackground(Ui.forma(Ui.superficie, destaque ? Ui.primaria : Ui.texto, 30));
+        l.setBackground(Ui.forma(Ui.superficie, destaque ? Ui.primaria : Ui.contorno, 30));
 
         LinearLayout.LayoutParams lpA = new LinearLayout.LayoutParams(Ui.dp(36), Ui.dp(36));
         lpA.rightMargin = Ui.dp(12);
-        l.addView(Ui.avatar(a, it.contato.nome, 36), lpA);
+        l.addView(Ui.avatar(a, it.grupo ? "W" : it.contato.nome, 36), lpA);
 
         LinearLayout textos = new LinearLayout(a);
         textos.setOrientation(LinearLayout.VERTICAL);

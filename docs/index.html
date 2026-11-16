@@ -8,9 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
 <style>
-  :root { --fundo:#f4e4d8; --sup:#fbf3ec; --texto:#1f2438; --sec:#6e6462; --azul:#4070ce; --laranja:#de781e; }
+  :root { --fundo:#faf4ed; --sup:#ffffff; --texto:#1b2540; --sec:#706c76; --azul:#3b5bdb; --laranja:#e27a22; }
   @media (prefers-color-scheme: dark) {
-    :root { --fundo:#1c1a1f; --sup:#28252c; --texto:#f0eae4; --sec:#aaa29e; --azul:#7aa3f0; --laranja:#f5a050; }
+    :root { --fundo:#14161c; --sup:#1f222b; --texto:#eef0f5; --sec:#9aa1ae; --azul:#8aa4ff; --laranja:#ffb067; }
   }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--fundo); color:var(--texto);
@@ -22,14 +22,14 @@
   .lema { color: var(--sec); font-size: 20px; margin: 20px auto 28px; max-width: 30ch; text-wrap: balance; }
   .botao { display:inline-block; background:var(--azul); color:#fff; text-decoration:none; font-weight:700;
            letter-spacing:.06em; padding: 18px 44px; border-radius: 60px; font-size: 20px;
-           box-shadow: 0 6px 18px rgba(64,112,206,.35); transition: transform .12s; }
+           box-shadow: 0 6px 18px rgba(59,91,219,.35); transition: transform .12s; }
   .botao:hover { transform: scale(1.03); } .botao:active { transform: scale(.97); }
   .nota { color:var(--sec); font-size:14px; margin-top:14px; }
   .telas { display:flex; gap:16px; overflow-x:auto; padding: 16px 4px 24px; scroll-snap-type:x mandatory; }
-  .telas img { height: 480px; border-radius: 22px; border: 2px solid var(--texto); scroll-snap-align:center; flex:none; }
+  .telas img { height: 480px; border-radius: 22px; border: 1px solid color-mix(in srgb, var(--texto) 25%, transparent); scroll-snap-align:center; flex:none; }
   h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .08em; margin: 40px 0 12px; }
   .cartoes { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-  .cartao { background:var(--sup); border: 1.5px solid var(--texto); border-radius: 18px; padding: 16px 18px; }
+  .cartao { background:var(--sup); border: 1px solid color-mix(in srgb, var(--texto) 15%, transparent); border-radius: 18px; padding: 16px 18px; }
   .cartao b { display:block; margin-bottom: 4px; }
   .cartao span { color: var(--sec); font-size: 15px; }
   table { width:100%; border-collapse: collapse; background:var(--sup); border-radius: 18px; overflow:hidden; }
@@ -54,6 +54,7 @@
     <img src="telas/03-inicio.png" alt="Início com o botão Enviar">
     <img src="telas/21-envio.png" alt="Acompanhamento do envio para cada pessoa">
     <img src="telas/16-contatos.png" alt="Contatos salvos">
+    <img src="telas/23-verde.png" alt="Outra cor do app">
     <img src="telas/14-info.png" alt="Configuração de quem recebe a mensagem">
     <img src="telas/04-gaveta.png" alt="Menu lateral">
     <img src="telas/22-escuro.png" alt="Tema escuro">
@@ -62,6 +63,7 @@
   <h2>O que ele faz</h2>
   <div class="cartoes">
     <div class="cartao"><b>Um toque para enviar</b><span>Pelo botão do app ou por um atalho na tela inicial do celular.</span></div>
+    <div class="cartao"><b>Lembrete no horário certo</b><span>Das 16h às 19h, por exemplo, uma notificação aparece com o botão Enviar.</span></div>
     <div class="cartao"><b>Mensagens prontas</b><span>Com texto, foto ou vídeo. Escreva {nome} e cada pessoa recebe com o próprio nome.</span></div>
     <div class="cartao"><b>Cada um na sua rede</b><span>WhatsApp, SMS, Telegram, Instagram, Facebook, X e Snapchat.</span></div>
     <div class="cartao"><b>Seus dados são seus</b><span>Tudo fica só no celular. Sem servidor, sem cadastro online, sem anúncios.</span></div>
@@ -71,7 +73,7 @@
   <table>
     <tr><td>SMS</td><td>Sozinho, sem nenhum toque extra.</td></tr>
     <tr><td>Telegram</td><td>Sozinho, por um bot seu (configuração única).</td></tr>
-    <tr><td>WhatsApp</td><td>Abre a conversa com a mensagem pronta; é só tocar em enviar.</td></tr>
+    <tr><td>WhatsApp</td><td>Abre uma vez só: você marca as pessoas e envia para todas.</td></tr>
     <tr><td>Instagram, Facebook, X, Snapchat</td><td>Abre a conversa e deixa a mensagem copiada para colar.</td></tr>
   </table>
 

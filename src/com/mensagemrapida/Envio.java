@@ -42,6 +42,7 @@ final class Envio {
         final boolean auto;
         int estado = AGUARDANDO;
         String erro = "";
+        boolean grupo; // várias pessoas do WhatsApp numa abertura só
 
         Item(Dados.Contato c, String r, boolean auto) {
             contato = c;
@@ -121,6 +122,7 @@ final class Envio {
             }
             itens.add(it);
         }
+        juntarWhatsApp();
         if (temSms && a.checkSelfPermission(Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
             a.pedirPermissaoSms(new MainActivity.Resposta() {
                 public void sim(boolean ok) {
@@ -140,6 +142,28 @@ final class Envio {
         iniciar();
     }
 
+    /**
+     * Troca as conversas de WhatsApp, uma por pessoa, por uma abertura só: o WhatsApp mostra a lista
+     * de conversas, o usuário marca as pessoas e envia para todas de uma vez (como ao compartilhar um link).
+     * Não vale quando o texto usa {nome}, porque aí cada pessoa recebe um texto diferente.
+     */
+    private void juntarWhatsApp() {
+        if (!d.whatsJunto || mensagem.texto.contains("{nome}")) return;
+        List<Item> whats = new ArrayList<Item>();
+        for (Item it : itens) {
+            if (Redes.WHATSAPP.equals(it.rede) && it.estado == AGUARDANDO) whats.add(it);
+        }
+        if (whats.size() < 2) return;
+        StringBuilder nomes = new StringBuilder();
+        for (Item it : whats) nomes.append(nomes.length() > 0 ? ", " : "").append(it.contato.nome);
+        Dados.Contato todos = new Dados.Contato();
+        todos.nome = nomes.toString();
+        Item junto = new Item(todos, Redes.WHATSAPP, false);
+        junto.grupo = true;
+        itens.add(itens.indexOf(whats.get(0)), junto);
+        itens.removeAll(whats);
+    }
+
     private void iniciar() {
         d.ativa = mensagem.id;
         d.registrarEnvio(mensagem.nome, itens.size());
@@ -157,8 +181,12 @@ final class Envio {
 
     /** O texto para uma pessoa: troca {nome} pelo primeiro nome dela. */
     String textoPara(Dados.Contato c) {
+        return textoPara(mensagem, c);
+    }
+
+    static String textoPara(Dados.Mensagem m, Dados.Contato c) {
         String primeiro = c.nome.trim().split("\\s+")[0];
-        return mensagem.texto.replace("{nome}", primeiro);
+        return m.texto.replace("{nome}", primeiro);
     }
 
     /** A próxima conversa que o usuário ainda precisa abrir, ou null. */
@@ -199,17 +227,22 @@ final class Envio {
     void abrir(Item it) {
         String rede = it.rede;
         Dados.Contato c = it.contato;
-        String txt = textoPara(c);
+        String txt = it.grupo ? mensagem.texto : textoPara(c);
         String pkg = Redes.pacote(rede);
         Intent i;
 
-        if (midia != null) {
+        if (it.grupo && midia == null) {
+            // Sem destinatário: o WhatsApp abre a lista para marcar várias conversas.
+            i = new Intent(Intent.ACTION_SEND);
+            i.setType("text/plain");
+            i.putExtra(Intent.EXTRA_TEXT, txt);
+        } else if (midia != null) {
             i = new Intent(Intent.ACTION_SEND);
             i.setType(midia.mime);
             i.putExtra(Intent.EXTRA_STREAM, ArquivoProvider.uri(midia));
             i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             if (!txt.isEmpty()) i.putExtra(Intent.EXTRA_TEXT, txt);
-            if (Redes.WHATSAPP.equals(rede)) {
+            if (Redes.WHATSAPP.equals(rede) && !it.grupo) {
                 // Faz o WhatsApp abrir direto na conversa da pessoa.
                 i.putExtra("jid", numeroInternacional(c.telefone) + "@s.whatsapp.net");
             } else if (Redes.SMS.equals(rede)) {
@@ -234,7 +267,7 @@ final class Envio {
         List<String> tentativas = new ArrayList<String>();
         tentativas.add(pkg);
         if (Redes.WHATSAPP.equals(rede)) tentativas.add("com.whatsapp.w4b");
-        if (pkg != null && midia == null) tentativas.add(null); // abre no navegador
+        if (pkg != null && midia == null && !it.grupo) tentativas.add(null); // abre no navegador
         for (String p : tentativas) {
             i.setPackage(p);
             try {
@@ -277,7 +310,7 @@ final class Envio {
         return n;
     }
 
-    private static String codificar(String s) {
+    static String codificar(String s) {
         try {
             return URLEncoder.encode(s, "UTF-8");
         } catch (Exception e) {
@@ -347,7 +380,7 @@ final class Envio {
         }).start();
     }
 
-    private static String enviarArquivoTelegram(String token, String chat, String legenda,
+    static String enviarArquivoTelegram(String token, String chat, String legenda,
                                                 Dados.Midia md, File f) throws Exception {
         String metodo, campo;
         if (md.mime.startsWith("image/") && !md.mime.equals("image/gif")) {

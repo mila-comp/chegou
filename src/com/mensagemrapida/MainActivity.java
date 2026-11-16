@@ -70,6 +70,7 @@ public class MainActivity extends Activity {
         Ui.aplicar(this, d);
         envio = new Envio(this);
         montar();
+        Lembretes.reagendar(this);
 
         if (!d.logado) {
             irPara(new TelaBoasVindas());
@@ -101,15 +102,28 @@ public class MainActivity extends Activity {
         envio.aoRetornar();
     }
 
-    /** Toque no widget da tela inicial: envia a mensagem do Início na hora. */
+    /** Toque no widget ou na notificação de lembrete. */
     private void tratarIntent(Intent intent) {
-        if (intent == null || !WidgetEnviar.ACAO_ENVIAR.equals(intent.getAction())) return;
+        if (intent == null || intent.getAction() == null) return;
         // Reabrir o app pela lista de recentes reentrega o intent original; não reenviar.
         if ((intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) return;
+        boolean enviar = WidgetEnviar.ACAO_ENVIAR.equals(intent.getAction());
+        Dados.Mensagem m = d.mensagem(String.valueOf(intent.getStringExtra(Lembretes.EXTRA_MENSAGEM)));
+        if (!enviar && m == null) return;
         setIntent(new Intent(this, MainActivity.class));
         if (!d.logado) return;
+        if (m != null) {
+            // Veio de um lembrete: essa passa a ser a mensagem do Início.
+            d.ativa = m.id;
+            if (enviar) {
+                m.lembreteFeito = Lembretes.hoje();
+                ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE))
+                        .cancel(Lembretes.idNotificacao(m));
+            }
+            d.salvar();
+        }
         irPara(new TelaInicio());
-        envio.enviar(d.mensagemAtiva());
+        if (enviar) envio.enviar(m != null ? m : d.mensagemAtiva());
     }
 
     /** Aplica tema/fonte/idioma novos redesenhando tudo. */
@@ -362,8 +376,12 @@ public class MainActivity extends Activity {
     }
 
     void pedirPermissaoSms(Resposta r) {
+        pedirPermissao(Manifest.permission.SEND_SMS, r);
+    }
+
+    void pedirPermissao(String permissao, Resposta r) {
         respostaSms = r;
-        requestPermissions(new String[]{Manifest.permission.SEND_SMS}, REQ_SMS);
+        requestPermissions(new String[]{permissao}, REQ_SMS);
     }
 
     @Override

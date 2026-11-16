@@ -49,7 +49,7 @@ public class FotosTest {
         foto("01-chegou");
         Dados d = Dados.de(a);
         d.criarConta("Kamilah", "k@exemplo.com", "1234");
-        String[][] cs = {{"Fulano", Redes.WHATSAPP}, {"Ciclano", Redes.INSTAGRAM}, {"Beltrano", Redes.FACEBOOK}};
+        String[][] cs = {{"Fulano", Redes.WHATSAPP}, {"Ciclano", Redes.WHATSAPP}, {"Beltrano", Redes.INSTAGRAM}};
         for (String[] x : cs) {
             Dados.Contato c = new Dados.Contato();
             c.id = Dados.novoId(); c.nome = x[0]; c.meio = x[1]; c.telefone = "11912345678"; c.usuario = "@" + x[0];
@@ -60,6 +60,7 @@ public class FotosTest {
         m.id = Dados.novoId(); m.nome = "Olá!"; m.texto = "Olá! Cheguei em casa, tá tudo bem 😊";
         m.criado = System.currentTimeMillis();
         for (Dados.Contato c : d.contatos) m.destinatarios.add(c.id);
+        m.lembrete = true;
         d.mensagens.add(m);
         Dados.Mensagem m2 = new Dados.Mensagem();
         m2.id = Dados.novoId(); m2.nome = "Bom dia"; m2.texto = "Bom dia, {nome}! ☀️"; m2.criado = System.currentTimeMillis();
@@ -98,5 +99,11 @@ public class FotosTest {
         d.salvar();
         a = Robolectric.buildActivity(MainActivity.class).setup().get();
         foto("22-escuro");
+        // Outra cor
+        d.escuro = false;
+        d.cor = 1;
+        d.salvar();
+        a = Robolectric.buildActivity(MainActivity.class).setup().get();
+        foto("23-verde");
     }
 }

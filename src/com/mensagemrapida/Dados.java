@@ -35,6 +35,12 @@ final class Dados {
         String id, nome, texto = "", rede = "", midia = "";
         long criado;
         List<String> destinatarios = new ArrayList<String>();
+
+        // Lembrete: notificação com botão Enviar dentro de uma janela de horário.
+        boolean lembrete;
+        int lembreteInicio = 16 * 60, lembreteFim = 19 * 60; // minutos desde a meia-noite
+        int lembreteDias = 127; // um bit por dia, domingo = bit 0
+        int lembreteFeito; // dia (aaaammdd) em que já foi enviado ou dispensado
     }
 
     static class Midia {
@@ -67,6 +73,8 @@ final class Dados {
     String ativa = "";
     final List<Registro> historico = new ArrayList<Registro>();
     boolean confirmar; // perguntar antes de enviar
+    boolean whatsJunto = true; // WhatsApp: abrir uma vez só e marcar todos lá
+    int cor; // cor principal escolhida (índice em Ui.CORES)
 
     boolean escuro, contraste, vibrar = true;
     int fonte; // 0 normal, 1 grande, 2 muito grande
@@ -151,6 +159,10 @@ final class Dados {
 
     static String data(long t) {
         return new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(new Date(t));
+    }
+
+    static String hora(int minutos) {
+        return String.format(Locale.US, "%02d:%02d", minutos / 60, minutos % 60);
     }
 
     static String dataHora(long t) {
@@ -250,7 +262,16 @@ final class Dados {
 
     // ------------------------------------------------------------------ gravação
 
+    /** Grava e avisa o widget e os lembretes de que algo mudou. */
     void salvar() {
+        gravar();
+        L.ingles = "en".equals(idioma);
+        WidgetEnviar.atualizar(ctx);
+        Lembretes.reagendar(ctx);
+    }
+
+    /** Só grava no celular. */
+    private void gravar() {
         try {
             JSONObject o = new JSONObject();
             if (conta != null) {
@@ -270,6 +291,8 @@ final class Dados {
             o.put("idioma", idioma);
             o.put("telegramToken", telegramToken);
             o.put("confirmar", confirmar);
+            o.put("whatsJunto", whatsJunto);
+            o.put("cor", cor);
             JSONArray hs = new JSONArray();
             for (Registro r : historico) {
                 JSONObject j = new JSONObject();
@@ -303,6 +326,11 @@ final class Dados {
                 j.put("midia", m.midia);
                 j.put("criado", m.criado);
                 j.put("destinatarios", new JSONArray(m.destinatarios));
+                j.put("lembrete", m.lembrete);
+                j.put("lembreteInicio", m.lembreteInicio);
+                j.put("lembreteFim", m.lembreteFim);
+                j.put("lembreteDias", m.lembreteDias);
+                j.put("lembreteFeito", m.lembreteFeito);
                 ms.put(j);
             }
             o.put("mensagens", ms);
@@ -324,8 +352,6 @@ final class Dados {
         } catch (Exception e) {
             // não deveria acontecer: só gravamos tipos simples
         }
-        L.ingles = "en".equals(idioma);
-        WidgetEnviar.atualizar(ctx);
     }
 
     private void carregar() {
@@ -348,6 +374,8 @@ final class Dados {
             idioma = o.optString("idioma", "pt");
             telegramToken = o.optString("telegramToken", "");
             confirmar = o.optBoolean("confirmar", false);
+            whatsJunto = o.optBoolean("whatsJunto", true);
+            cor = o.optInt("cor", 0);
             JSONArray hs = o.optJSONArray("historico");
             for (int i = 0; hs != null && i < hs.length(); i++) {
                 JSONObject j = hs.getJSONObject(i);
@@ -380,6 +408,11 @@ final class Dados {
                 x.rede = j.optString("rede", "");
                 x.midia = j.optString("midia", "");
                 x.criado = j.optLong("criado");
+                x.lembrete = j.optBoolean("lembrete", false);
+                x.lembreteInicio = j.optInt("lembreteInicio", 16 * 60);
+                x.lembreteFim = j.optInt("lembreteFim", 19 * 60);
+                x.lembreteDias = j.optInt("lembreteDias", 127);
+                x.lembreteFeito = j.optInt("lembreteFeito", 0);
                 JSONArray d = j.optJSONArray("destinatarios");
                 for (int k = 0; d != null && k < d.length(); k++) x.destinatarios.add(d.getString(k));
                 mensagens.add(x);
@@ -430,7 +463,9 @@ final class Dados {
                 ativa = m.id;
             }
             if (telegramToken.isEmpty()) telegramToken = antigo.getString("telegram_token", "");
-            salvar();
+            // gravar(), não salvar(): ainda estamos no construtor, e o widget e os lembretes
+            // pediriam Dados.de() de novo, criando outro Dados sem fim.
+            gravar();
             antigo.edit().clear().apply();
         } catch (Exception e) {
             // se não der para migrar, segue com os dados novos

@@ -200,6 +200,8 @@ class TelaConfig extends Tela {
 
         item(col, L.t("Aparência", "Appearance"), d.escuro ? L.t("Escuro", "Dark") : L.t("Claro", "Light"),
                 new Runnable() { public void run() { aparencia(); } });
+        item(col, L.t("Cor do app", "App color"), Ui.nomesCores()[Math.min(d.cor, Ui.CORES.length - 1)],
+                new Runnable() { public void run() { cor(); } });
         item(col, L.t("Conta", "Account"), null, new Runnable() { public void run() { conta(); } });
         item(col, L.t("Notificações", "Notifications"), d.vibrar ? L.t("Vibrar", "Vibrate") : L.t("Silencioso", "Silent"),
                 new Runnable() { public void run() { notificacoes(); } });
@@ -210,6 +212,10 @@ class TelaConfig extends Tela {
                         d.salvar();
                         a.desenhar();
                     }
+                });
+        item(col, L.t("WhatsApp: todos de uma vez", "WhatsApp: everyone at once"),
+                d.whatsJunto ? L.t("Sim", "Yes") : L.t("Não", "No"), new Runnable() {
+                    public void run() { whatsApp(); }
                 });
         item(col, L.t("Armazenamento e dados", "Storage and data"), null,
                 new Runnable() { public void run() { a.abrir(new TelaArmazenamento()); } });
@@ -253,6 +259,34 @@ class TelaConfig extends Tela {
                         d.escuro = i == 1;
                         d.salvar();
                         a.reaplicarAparencia();
+                    }
+                }).show();
+    }
+
+    private void cor() {
+        a.dialogo().setTitle(L.t("Cor do app", "App color"))
+                .setSingleChoiceItems(Ui.nomesCores(), d.cor, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface di, int i) {
+                        di.dismiss();
+                        d.cor = i;
+                        d.salvar();
+                        a.reaplicarAparencia();
+                    }
+                }).show();
+    }
+
+    private void whatsApp() {
+        String[] ops = {L.t("Todos de uma vez: o WhatsApp abre uma vez, você marca as pessoas e envia",
+                "Everyone at once: WhatsApp opens once, you tick the people and send"),
+                L.t("Uma conversa por vez: já abre na pessoa certa, uma de cada vez",
+                        "One chat at a time: opens on the right person, one by one")};
+        a.dialogo().setTitle("WhatsApp")
+                .setSingleChoiceItems(ops, d.whatsJunto ? 0 : 1, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface di, int i) {
+                        d.whatsJunto = i == 0;
+                        d.salvar();
+                        di.dismiss();
+                        a.desenhar();
                     }
                 }).show();
     }

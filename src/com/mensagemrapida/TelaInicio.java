@@ -134,7 +134,7 @@ class TelaInicio extends Tela {
         LinearLayout c = new LinearLayout(a);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setPadding(Ui.dp(18), Ui.dp(14), Ui.dp(18), Ui.dp(10));
-        c.setBackground(Ui.clicavel(Ui.forma(Ui.superficie, Ui.texto, 18)));
+        c.setBackground(Ui.clicavel(Ui.forma(Ui.superficie, Ui.contorno, 18)));
         c.setElevation(Ui.dp(2));
         c.setClickable(true);
 
@@ -169,6 +169,10 @@ class TelaInicio extends Tela {
         if (n > 5) quem.addView(Ui.texto(a, "+" + (n - 5), 14, Ui.textoSec));
         if (n > 0) c.addView(quem);
         c.addView(Ui.texto(a, resumoDestino(d, m), 14, Ui.textoSec));
+        if (m.lembrete) {
+            c.addView(Ui.texto(a, "🔔 " + L.t("Lembrete das ", "Reminder from ") + Dados.hora(m.lembreteInicio)
+                    + L.t(" às ", " to ") + Dados.hora(m.lembreteFim), 14, Ui.laranja));
+        }
 
         LinearLayout acoes = new LinearLayout(a);
         acoes.setGravity(Gravity.END);

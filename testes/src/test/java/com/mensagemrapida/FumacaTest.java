@@ -217,7 +217,12 @@ public class FumacaTest {
         List<View> vs = new ArrayList<View>();
         coletar(raiz(), vs);
         int n = 0;
-        for (View v : vs) if (v instanceof CheckBox) { ((CheckBox) v).setChecked(true); n++; }
+        for (View v : vs) {
+            if (v instanceof CheckBox && !((CheckBox) v).getText().toString().contains("barra de notificações")) {
+                ((CheckBox) v).setChecked(true);
+                n++;
+            }
+        }
         assertEquals(3, n);
         clicar("Salvar");
         tela("3 início com mensagem");
@@ -475,5 +480,148 @@ public class FumacaTest {
             idle();
         }
         System.out.println("todas as telas abriram");
+    }
+
+    Dados.Contato contato(Dados d, String nome, String meio) {
+        Dados.Contato c = new Dados.Contato();
+        c.id = Dados.novoId(); c.nome = nome; c.telefone = "119" + Math.abs(nome.hashCode() % 100000000);
+        c.usuario = "@" + nome; c.meio = meio; c.criado = System.currentTimeMillis();
+        d.contatos.add(c);
+        return c;
+    }
+
+    @Test
+    public void whatsAppTodosDeUmaVez() {
+        abrirApp();
+        criarConta();
+        Dados d = Dados.de(a());
+        Dados.Mensagem m = new Dados.Mensagem();
+        m.id = "m1"; m.nome = "Cheguei"; m.texto = "Cheguei em casa!";
+        m.destinatarios.add(contato(d, "Ana", Redes.WHATSAPP).id);
+        m.destinatarios.add(contato(d, "Bia", Redes.WHATSAPP).id);
+        m.destinatarios.add(contato(d, "Caio", Redes.INSTAGRAM).id);
+        d.mensagens.add(m);
+        d.salvar();
+        a().irPara(new TelaInicio());
+        idle();
+        clicar("ENVIAR");
+        tela("envio com WhatsApp em grupo");
+        assertTrue(tem("Ana, Bia"));
+        assertTrue(tem("0 de 2"));
+        clicar("Abrir o WhatsApp");
+        Intent w = shadowOf(a()).getNextStartedActivity();
+        assertEquals(Intent.ACTION_SEND, w.getAction());
+        assertEquals("com.whatsapp", w.getPackage());
+        assertEquals("Cheguei em casa!", w.getStringExtra(Intent.EXTRA_TEXT));
+        assertNull("sem destinatário fixo: o WhatsApp mostra a lista", w.getStringExtra("jid"));
+
+        // Com {nome} cada pessoa recebe um texto diferente: volta a ser uma conversa por pessoa
+        m.texto = "Oi {nome}, cheguei!";
+        a().irPara(new TelaInicio());
+        idle();
+        clicar("ENVIAR");
+        assertTrue(tem("0 de 3"));
+        assertTrue(tem("Abrir conversa com Ana"));
+
+        // Desligando a opção também
+        m.texto = "Cheguei em casa!";
+        d.whatsJunto = false;
+        a().irPara(new TelaInicio());
+        idle();
+        clicar("ENVIAR");
+        assertTrue(tem("0 de 3"));
+    }
+
+    @Test
+    public void lembreteNaNotificacao() {
+        abrirApp();
+        criarConta();
+        Dados d = Dados.de(a());
+        Dados.Mensagem m = new Dados.Mensagem();
+        m.id = "m1"; m.nome = "Cheguei"; m.texto = "Cheguei em casa!";
+        m.destinatarios.add(contato(d, "Ana", Redes.WHATSAPP).id);
+        m.destinatarios.add(contato(d, "Bia", Redes.WHATSAPP).id);
+        d.mensagens.add(m);
+        d.salvar();
+        android.app.NotificationManager nm = (android.app.NotificationManager)
+                a().getSystemService(Context.NOTIFICATION_SERVICE);
+        assertEquals("sem lembrete, sem notificação", 0, shadowOf(nm).size());
+
+        // Liga o lembrete pela tela Info
+        a().abrir(new TelaInfoMensagem(m));
+        idle();
+        tela("info com lembrete desligado");
+        List<View> vs = new ArrayList<View>();
+        coletar(raiz(), vs);
+        for (View v : vs) {
+            if (v instanceof CheckBox && ((CheckBox) v).getText().toString().contains("barra de notificações")) {
+                ((CheckBox) v).setChecked(true);
+            }
+        }
+        idle();
+        tela("info com lembrete ligado");
+        assertTrue(tem("16:00"));
+        assertTrue(tem("19:00"));
+        clicar("Salvar");
+        assertTrue(m.lembrete);
+        assertTrue("início mostra o lembrete", tem("Lembrete das 16:00 às 19:00"));
+
+        // Janela que contém "agora": a notificação aparece, com o botão Enviar
+        java.util.Calendar c = java.util.Calendar.getInstance();
+        int agora = c.get(java.util.Calendar.HOUR_OF_DAY) * 60 + c.get(java.util.Calendar.MINUTE);
+        m.lembreteInicio = (agora + 1439) % 1440;
+        m.lembreteFim = (agora + 60) % 1440;
+        d.salvar();
+        assertEquals(1, shadowOf(nm).size());
+        android.app.Notification n = shadowOf(nm).getAllNotifications().get(0);
+        assertEquals("Cheguei", n.extras.getString(android.app.Notification.EXTRA_TITLE));
+        System.out.println("NOTIFICAÇÃO: " + n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)
+                + " | ação: " + n.actions[0].title);
+        assertEquals("Avisar Ana e Bia?", String.valueOf(n.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)));
+        assertEquals("Enviar agora", String.valueOf(n.actions[0].title));
+        android.app.AlarmManager am = (android.app.AlarmManager) a().getSystemService(Context.ALARM_SERVICE);
+        assertNotNull("alarme para o fim/início da janela", shadowOf(am).getNextScheduledAlarm());
+
+        // WhatsApp precisa abrir o app: o botão leva à tela de envio
+        assertTrue(shadowOf(n.actions[0].actionIntent).isActivityIntent());
+        ctl.newIntent(shadowOf(n.actions[0].actionIntent).getSavedIntent());
+        idle();
+        tela("envio a partir da notificação");
+        assertTrue(tem("Abrir o WhatsApp"));
+        assertEquals("depois de enviar, a notificação some", 0, shadowOf(nm).size());
+        d.salvar();
+        assertEquals("e não volta no mesmo dia", 0, shadowOf(nm).size());
+
+        // Dispensar (arrastar para o lado) também vale pelo dia
+        m.lembreteFeito = 0;
+        d.salvar();
+        assertEquals(1, shadowOf(nm).size());
+        new Lembretes().onReceive(a(), new Intent(Lembretes.ACAO_DISPENSAR).putExtra(Lembretes.EXTRA_MENSAGEM, "m1"));
+        nm.cancelAll();
+        d.salvar();
+        assertEquals(0, shadowOf(nm).size());
+
+        // Fora da janela não aparece
+        m.lembreteFeito = 0;
+        m.lembreteInicio = (agora + 120) % 1440;
+        m.lembreteFim = (agora + 180) % 1440;
+        d.salvar();
+        assertEquals(0, shadowOf(nm).size());
+
+        // Dia da semana desmarcado não aparece
+        m.lembreteInicio = (agora + 1439) % 1440;
+        m.lembreteFim = (agora + 60) % 1440;
+        m.lembreteDias = 127 & ~(1 << (c.get(java.util.Calendar.DAY_OF_WEEK) - 1));
+        d.salvar();
+        assertEquals(0, shadowOf(nm).size());
+
+        // Só Telegram com bot configurado: o botão envia em segundo plano, sem abrir o app
+        m.lembreteDias = 127;
+        m.destinatarios.clear();
+        m.destinatarios.add(contato(d, "Davi", Redes.TELEGRAM).id);
+        d.telegramToken = "123:abc";
+        d.salvar();
+        n = shadowOf(nm).getAllNotifications().get(0);
+        assertTrue("envio automático não abre o app", shadowOf(n.actions[0].actionIntent).isBroadcastIntent());
     }
 }

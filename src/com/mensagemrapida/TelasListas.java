@@ -111,6 +111,8 @@ class TelaInfoMensagem extends Tela {
     private final Dados.Mensagem m;
     private String rede, midia;
     private List<String> escolhidos;
+    private boolean lembrete;
+    private int inicio, fim, dias;
 
     TelaInfoMensagem(Dados.Mensagem m) {
         this.m = m;
@@ -122,6 +124,10 @@ class TelaInfoMensagem extends Tela {
             escolhidos = new ArrayList<String>(m.destinatarios);
             rede = m.rede;
             midia = m.midia;
+            lembrete = m.lembrete;
+            inicio = m.lembreteInicio;
+            fim = m.lembreteFim;
+            dias = m.lembreteDias;
         }
         LinearLayout col = Ui.coluna(a);
         col.addView(cabecalho(m.nome));
@@ -129,7 +135,7 @@ class TelaInfoMensagem extends Tela {
         col.addView(Ui.rotulo(a, L.t("Mensagem:", "Message:")));
         TextView txt = Ui.texto(a, m.texto, 15, Ui.texto);
         txt.setPadding(Ui.dp(12), Ui.dp(10), Ui.dp(12), Ui.dp(10));
-        txt.setBackground(Ui.clicavel(Ui.forma(Ui.superficie, Ui.texto, 4)));
+        txt.setBackground(Ui.clicavel(Ui.forma(Ui.superficie, Ui.contorno, 4)));
         txt.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { a.abrir(new TelaFormMensagem(m)); }
         });
@@ -188,6 +194,8 @@ class TelaInfoMensagem extends Tela {
         });
         col.addView(novo);
 
+        secaoLembrete(col);
+
         TextView voltar = Ui.botao(a, L.t("Voltar", "Back"));
         TextView salvar = Ui.botaoCheio(a, L.t("Salvar", "Save"));
         voltar.setOnClickListener(new View.OnClickListener() {
@@ -199,14 +207,98 @@ class TelaInfoMensagem extends Tela {
                 m.destinatarios.addAll(escolhidos);
                 m.rede = rede;
                 m.midia = midia;
+                boolean ligou = lembrete && !m.lembrete;
+                m.lembrete = lembrete;
+                m.lembreteInicio = inicio;
+                m.lembreteFim = fim;
+                m.lembreteDias = dias;
+                m.lembreteFeito = 0; // mudou a configuração: vale de novo para hoje
                 d.ativa = m.id;
                 d.salvar();
                 a.voltar();
                 a.aviso(L.t("Salvo! Esta é a mensagem do Início agora.", "Saved! This is now the Home message."));
+                if (ligou && android.os.Build.VERSION.SDK_INT >= 33
+                        && a.checkSelfPermission(Lembretes.PERMISSAO_NOTIFICAR)
+                        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    // Android 13+: o usuário precisa permitir notificações.
+                    a.pedirPermissao(Lembretes.PERMISSAO_NOTIFICAR, new MainActivity.Resposta() {
+                        public void sim(boolean ok) {
+                            if (ok) Lembretes.reagendar(a);
+                            else a.aviso(L.t("Sem permissão de notificações, o lembrete não aparece.",
+                                    "Without notification permission the reminder can't show."));
+                        }
+                    });
+                }
             }
         });
         col.addView(Ui.barraBotoes(a, voltar, salvar));
         return Ui.rolagem(a, col);
+    }
+
+    /** Lembrete: notificação com botão Enviar numa janela de horário, nos dias marcados. */
+    private void secaoLembrete(LinearLayout col) {
+        col.addView(Ui.rotulo(a, L.t("Lembrete na notificação:", "Notification reminder:")));
+        CheckBox liga = Ui.caixa(a, L.t("Mostrar botão Enviar na barra de notificações", "Show a Send button in notifications"));
+        liga.setChecked(lembrete);
+        liga.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton b, boolean marcado) {
+                lembrete = marcado;
+                a.desenhar();
+            }
+        });
+        col.addView(liga);
+        if (!lembrete) return;
+
+        LinearLayout horas = new LinearLayout(a);
+        horas.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        horas.addView(Ui.texto(a, L.t("Das  ", "From  "), 15, Ui.texto));
+        TextView de = Ui.seletor(a, Dados.hora(inicio));
+        horas.addView(de);
+        horas.addView(Ui.texto(a, L.t("  às  ", "  to  "), 15, Ui.texto));
+        TextView ate = Ui.seletor(a, Dados.hora(fim));
+        horas.addView(ate);
+        de.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { escolherHora(true); }
+        });
+        ate.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { escolherHora(false); }
+        });
+        col.addView(horas, Ui.margemBaixo(10));
+
+        // Dias da semana, de domingo a sábado.
+        String[] letras = L.t("D S T Q Q S S", "S M T W T F S").split(" ");
+        LinearLayout semana = new LinearLayout(a);
+        for (int i = 0; i < 7; i++) {
+            final int bit = 1 << i;
+            TextView dia = Ui.chip(a, letras[i], (dias & bit) != 0);
+            dia.setGravity(android.view.Gravity.CENTER);
+            dia.setPadding(0, Ui.dp(8), 0, Ui.dp(8));
+            dia.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    dias ^= bit;
+                    a.desenhar();
+                }
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1);
+            if (i < 6) lp.rightMargin = Ui.dp(6);
+            semana.addView(dia, lp);
+        }
+        col.addView(semana);
+        col.addView(Ui.texto(a, L.t("Nesse horário aparece uma notificação. Com SMS e Telegram, o botão envia "
+                        + "na hora, sem abrir o app; com as outras redes, abre a tela de envio.",
+                "A notification shows during this time. With SMS and Telegram the button sends right away "
+                        + "without opening the app; other networks open the sending screen."), 13, Ui.textoSec));
+    }
+
+    private void escolherHora(final boolean doInicio) {
+        int atual = doInicio ? inicio : fim;
+        new android.app.TimePickerDialog(a, Ui.estiloDialogo(), new android.app.TimePickerDialog.OnTimeSetListener() {
+            public void onTimeSet(android.widget.TimePicker tp, int h, int min) {
+                if (doInicio) inicio = h * 60 + min;
+                else fim = h * 60 + min;
+                a.desenhar();
+            }
+        }, atual / 60, atual % 60, true).show();
     }
 
     private void escolherMidia() {

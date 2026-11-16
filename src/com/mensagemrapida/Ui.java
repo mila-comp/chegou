@@ -34,38 +34,58 @@ import java.io.File;
 /** Cores, tamanhos e peças de interface reaproveitadas por todas as telas. */
 final class Ui {
 
-    // Paleta atual (muda com tema claro/escuro e alto contraste).
-    static int fundo, superficie, texto, textoSec, primaria, laranja, linha;
+    // Paleta atual (muda com tema claro/escuro, cor escolhida e alto contraste).
+    static int fundo, superficie, texto, textoSec, primaria, laranja, linha, contorno;
     static boolean escuro, contraste;
     static float escalaFonte = 1f;
     private static float densidade = 1f;
+
+    /** Cores principais que o usuário pode escolher: {no tema claro, no tema escuro}. */
+    static final int[][] CORES = {
+            {Color.rgb(59, 91, 219), Color.rgb(138, 164, 255)},  // índigo
+            {Color.rgb(13, 148, 136), Color.rgb(94, 214, 200)},  // verde-água
+            {Color.rgb(124, 77, 219), Color.rgb(184, 156, 255)}, // roxo
+            {Color.rgb(224, 82, 62), Color.rgb(255, 150, 130)},  // coral
+            {Color.rgb(214, 62, 122), Color.rgb(255, 140, 185)}, // rosa
+    };
+
+    static String[] nomesCores() {
+        return new String[]{L.t("Índigo", "Indigo"), L.t("Verde-água", "Teal"), L.t("Roxo", "Purple"),
+                L.t("Coral", "Coral"), L.t("Rosa", "Pink")};
+    }
+
+    static int corPrincipal(Dados d) {
+        return CORES[Math.max(0, Math.min(d.cor, CORES.length - 1))][d.escuro ? 1 : 0];
+    }
 
     static void aplicar(Context c, Dados d) {
         densidade = c.getResources().getDisplayMetrics().density;
         escuro = d.escuro;
         contraste = d.contraste;
         escalaFonte = d.fonte == 2 ? 1.3f : d.fonte == 1 ? 1.15f : 1f;
+        primaria = corPrincipal(d);
         if (escuro) {
-            fundo = Color.rgb(28, 26, 31);
-            superficie = Color.rgb(40, 37, 44);
-            texto = Color.rgb(240, 234, 228);
-            textoSec = Color.rgb(170, 162, 158);
-            primaria = Color.rgb(122, 163, 240);
-            laranja = Color.rgb(245, 160, 80);
+            fundo = Color.rgb(20, 22, 28);
+            superficie = Color.rgb(31, 34, 43);
+            texto = Color.rgb(238, 240, 245);
+            textoSec = Color.rgb(154, 161, 174);
+            laranja = Color.rgb(255, 176, 103);
+            contorno = Color.rgb(52, 57, 70);
         } else {
-            // O bege e o azul dos rascunhos.
-            fundo = Color.rgb(244, 228, 216);
-            superficie = Color.rgb(251, 243, 236);
-            texto = Color.rgb(31, 36, 56);
-            textoSec = Color.rgb(110, 100, 98);
-            primaria = Color.rgb(64, 112, 206);
-            laranja = Color.rgb(222, 120, 30);
+            // Creme claro com cartões brancos: o tom dos rascunhos, mais leve.
+            fundo = Color.rgb(250, 244, 237);
+            superficie = Color.WHITE;
+            texto = Color.rgb(27, 37, 64);
+            textoSec = Color.rgb(112, 108, 118);
+            laranja = Color.rgb(226, 122, 34);
+            contorno = Color.rgb(228, 217, 205);
         }
         if (contraste) {
             fundo = escuro ? Color.BLACK : Color.WHITE;
             superficie = fundo;
             texto = escuro ? Color.WHITE : Color.BLACK;
             textoSec = texto;
+            contorno = texto;
             primaria = escuro ? Color.rgb(160, 200, 255) : Color.rgb(0, 50, 160);
             laranja = escuro ? Color.rgb(255, 190, 90) : Color.rgb(160, 70, 0);
         }
@@ -122,13 +142,13 @@ final class Ui {
 
     /** Fundo clicável com efeito de toque. */
     static Drawable clicavel(Drawable conteudo) {
-        int r = escuro ? Color.argb(50, 255, 255, 255) : Color.argb(40, 64, 112, 206);
+        int r = Color.argb(escuro ? 60 : 45, Color.red(primaria), Color.green(primaria), Color.blue(primaria));
         return new RippleDrawable(ColorStateList.valueOf(r), conteudo, forma(Color.WHITE, 0, 12));
     }
 
     /** Fundo de campo com só a linha de baixo, como "Nome: ______". */
     static Drawable sublinhado() {
-        return linhaEmbaixo(textoSec, fundo, dp(contraste ? 2 : 1));
+        return linhaEmbaixo(contraste ? texto : contorno, fundo, dp(2));
     }
 
     /** Desenha a cor da linha e cobre tudo com o fundo, menos a faixa de baixo. */
@@ -204,7 +224,7 @@ final class Ui {
     /** Campo em formato de pílula (tela de entrar). */
     static EditText campoPilula(Context c, String hint, int tipo) {
         EditText e = campo(c, hint, tipo);
-        e.setBackground(forma(superficie, texto, 30));
+        e.setBackground(forma(superficie, contorno, 30));
         e.setPadding(dp(18), dp(12), dp(18), dp(12));
         return e;
     }
@@ -221,7 +241,7 @@ final class Ui {
         e.setTextColor(texto);
         e.setHintTextColor(textoSec);
         e.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16 * escalaFonte);
-        e.setBackground(forma(superficie, texto, 4));
+        e.setBackground(forma(superficie, contorno, 4));
         e.setPadding(dp(12), dp(12), dp(12), dp(12));
         e.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(limite)});
         col.addView(e);
@@ -241,7 +261,7 @@ final class Ui {
     static TextView seletor(Context c, String valor) {
         TextView t = texto(c, valor + "  ▾", 15, texto);
         t.setPadding(dp(12), dp(10), dp(12), dp(10));
-        t.setBackground(clicavel(forma(superficie, texto, 4)));
+        t.setBackground(clicavel(forma(superficie, contorno, 4)));
         t.setClickable(true);
         return t;
     }
@@ -263,7 +283,7 @@ final class Ui {
         LinearLayout l = new LinearLayout(c);
         l.setGravity(Gravity.CENTER_VERTICAL);
         l.setPadding(dp(avatar != null ? 10 : 18), dp(10), dp(18), dp(10));
-        l.setBackground(clicavel(forma(superficie, texto, 30)));
+        l.setBackground(clicavel(forma(superficie, contorno, 30)));
         l.setClickable(true);
         l.setLongClickable(true);
         pressionavel(l);
@@ -402,8 +422,7 @@ final class Ui {
     }
 
     private static Drawable sublinhadoMenu() {
-        int cor = escuro ? Color.argb(80, 255, 255, 255) : Color.argb(90, 31, 36, 56);
-        return linhaEmbaixo(contraste ? texto : cor, fundoAtualMenu, dp(1));
+        return linhaEmbaixo(contorno, fundoAtualMenu, dp(1));
     }
 
     /** Cor de fundo atrás dos itens de menu (a gaveta usa superfície; o resto, fundo). */
@@ -435,7 +454,7 @@ final class Ui {
     static View foto(Context c, File arquivo, int tamanhoDp) {
         int px = dp(tamanhoDp);
         FrameLayout f = new FrameLayout(c);
-        f.setBackground(forma(superficie, texto, tamanhoDp / 2f));
+        f.setBackground(forma(superficie, contorno, tamanhoDp / 2f));
         Bitmap b = arquivo != null && arquivo.exists() ? carregarCircular(arquivo, px) : null;
         if (b != null) {
             ImageView iv = new ImageView(c);

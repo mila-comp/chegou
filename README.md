@@ -9,7 +9,7 @@ pessoas escolhidas, cada uma pela sua rede preferida, ao toque de um botão.
   <img src="docs/telas/01-chegou.png" width="19%" alt="Tela de boas-vindas">
   <img src="docs/telas/03-inicio.png" width="19%" alt="Início com o botão Enviar">
   <img src="docs/telas/21-envio.png" width="19%" alt="Acompanhamento do envio">
-  <img src="docs/telas/16-contatos.png" width="19%" alt="Contatos salvos">
+  <img src="docs/telas/14-info.png" width="19%" alt="Quem recebe e lembrete">
   <img src="docs/telas/22-escuro.png" width="19%" alt="Tema escuro">
 </p>
 
@@ -23,12 +23,14 @@ o Play Protect pode mostrar um aviso: toque em *Instalar mesmo assim*.
 ## O que ele faz
 
 - **Um toque para enviar**: o botão ENVIAR do Início, ou o atalho (widget) na tela inicial do celular.
+- **Lembrete na notificação**: escolha um horário (ex.: das 16h às 19h) e os dias da semana; nessa janela
+  aparece uma notificação com o botão *Enviar agora*. Com SMS e Telegram, envia sem nem abrir o app.
 - **Mensagens salvas** com nome, texto de até 1000 caracteres e mídia opcional (até 10 MB).
 - **`{nome}` no texto** vira o primeiro nome de cada pessoa: "Oi {nome}!" → "Oi Ana!".
 - **Contatos** com o meio de comunicação principal de cada um.
 - **Acompanhamento do envio**: cada pessoa aparece com seu estado (enviado, aberta, falhou e por quê).
 - **Histórico** dos últimos envios.
-- Tema claro e escuro, fonte maior, alto contraste, português e inglês.
+- Tema claro e escuro, cinco cores para escolher, fonte maior, alto contraste, português e inglês.
 - Tudo fica **só no celular**: não há servidor, cadastro online nem coleta de dados.
 
 ### Como cada rede envia
@@ -37,7 +39,7 @@ o Play Protect pode mostrar um aviso: toque em *Instalar mesmo assim*.
 | --- | --- |
 | SMS | Sozinho, sem nenhum toque extra (com mídia, abre o app de mensagens pronto) |
 | Telegram | Sozinho, por um bot seu (configuração única em *Contas vinculadas*) |
-| WhatsApp | Abre a conversa com a mensagem pronta; é só tocar em enviar |
+| WhatsApp | Para várias pessoas: abre o WhatsApp uma vez, você marca as pessoas e envia para todas. Para uma pessoa: abre a conversa com a mensagem pronta |
 | Instagram, Facebook, X, Snapchat | Abre a conversa e deixa a mensagem copiada para colar |
 
 WhatsApp, Instagram, Facebook, X e Snapchat não permitem que outros aplicativos enviem mensagens
@@ -53,6 +55,7 @@ src/com/mensagemrapida/
   MainActivity.java   navegação, menu lateral, avisos
   Tela*.java          uma classe por tela dos rascunhos
   Envio.java          o que acontece ao tocar em ENVIAR
+  Lembretes.java      notificações com botão Enviar em horários marcados
   Dados.java          tudo o que é guardado no celular
   Ui.java             cores, temas e peças de interface
 testes/               testes automáticos (Robolectric) que usam o app do começo ao fim
