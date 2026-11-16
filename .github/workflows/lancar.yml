@@ -1,0 +1,29 @@
+# Publica o instalador em "Releases" sempre que uma versão nova do APK chega ao repositório.
+name: Lançar versão
+
+on:
+  push:
+    branches: [main]
+    paths: [app/Chegou.apk, VERSAO]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lancar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Criar ou atualizar o release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          versao="v$(tr -d '[:space:]' < VERSAO)"
+          if gh release view "$versao" >/dev/null 2>&1; then
+            gh release upload "$versao" app/Chegou.apk --clobber
+          else
+            gh release create "$versao" app/Chegou.apk \
+              --title "Chegou $versao" \
+              --notes "Baixe o arquivo **Chegou.apk** abaixo e abra no celular Android para instalar."
+          fi

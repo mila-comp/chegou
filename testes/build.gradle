@@ -1,0 +1,35 @@
+// Testes automáticos: abrem o app num Android simulado (Robolectric) e usam como uma pessoa usaria.
+// Rode ../build.sh antes (gera o R.java em ../build/gen) e depois: gradle test
+plugins { id 'java' }
+repositories { mavenCentral() }
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+sourceSets {
+  main { compileClasspath += files('/usr/lib/android-sdk/platforms/android-23/android.jar'); java { srcDirs = ['../src', '../build/gen'] } }
+}
+dependencies {
+  compileOnly files('/usr/lib/android-sdk/platforms/android-23/android.jar')
+  testCompileOnly files("$buildDir/android-all/android-all-instrumented-14-robolectric-10818077-i7.jar")
+  testRuntimeOnly files('/usr/lib/android-sdk/platforms/android-23/android.jar')
+  testImplementation 'junit:junit:4.13.2'
+  testImplementation('org.robolectric:robolectric:4.14.1') {
+    exclude group: 'androidx.test'
+    exclude group: 'androidx.test.espresso'
+  }
+}
+test {
+  systemProperty 'robolectric.enabledSdks', '34'
+  testLogging { events 'passed', 'failed'; exceptionFormat 'full'; showStandardStreams = true }
+}
+// O Robolectric precisa dos "Androids simulados" 14 e 15. São a mesma biblioteca em duas versões,
+// então cada uma fica na sua configuração (senão o Gradle manteria só a mais nova).
+configurations { android14; android15 }
+dependencies {
+  android14 'org.robolectric:android-all-instrumented:14-robolectric-10818077-i7'
+  android15 'org.robolectric:android-all-instrumented:15-robolectric-12650502-i7'
+}
+tasks.register('copiarAndroidAll', Copy) { from configurations.android14; from configurations.android15; into "$buildDir/android-all" }
+test.dependsOn 'copiarAndroidAll'
+compileTestJava.dependsOn 'copiarAndroidAll'
+test.systemProperty 'robolectric.offline', 'true'
+test.systemProperty 'robolectric.dependency.dir', "$buildDir/android-all"
+test.systemProperty 'fotos.dir', file("../docs/telas").absolutePath

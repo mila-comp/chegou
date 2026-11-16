@@ -1,0 +1,9 @@
+# Saídas de compilação
+build/
+testes/build/
+testes/.gradle/
+*.idsig
+
+# Chave que assina o app: NUNCA publicar (quem tiver a chave pode lançar "atualizações" falsas)
+chave.jks
+*.jks
